@@ -167,7 +167,7 @@ function WeaponView() {
   const slashPulse = useGame((s) => s.slashPulse)
   const shotTime = useRef(-9999)
   const slashTime = useRef(-9999)
-  const comboStep = useRef(0)
+  const comboStep = useRef(-1)
 
   const geometry = useMemo(() => ({
     blade: polygon([
@@ -473,9 +473,9 @@ export function Combat() {
         strength,
       },
     ])
-    shakeStrength.current = kind === 'katana' ? 0.045 : 0.016
-    shakeUntil.current = performance.now() + (kind === 'katana' ? 95 : 55)
-    useGame.getState().triggerImpact(kind === 'katana' ? 1 : 0.35, kind === 'katana' ? 45 : 0)
+    shakeStrength.current = kind === 'katana' ? 0.028 : 0.009
+    shakeUntil.current = performance.now() + (kind === 'katana' ? 78 : 42)
+    useGame.getState().triggerImpact(kind === 'katana' ? 1 : 0.28, kind === 'katana' ? 24 : 0)
   }
 
   const spawnShotVisual = (end: Vector3) => {
@@ -504,12 +504,18 @@ export function Combat() {
 
   const slash = () => {
     const now = performance.now()
-    if (now - lastSlash.current <= 280) return
+    if (now - lastSlash.current <= 230) return
     lastSlash.current = now
     useGame.getState().triggerSlash()
-    raycaster.setFromCamera(new Vector2(0, 0), camera)
-    raycaster.far = useGame.getState().stats.swordRange
-    const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart)
+
+    let hit: Intersection<Object3D> | undefined
+    for (const x of [0, -0.105, 0.105]) {
+      raycaster.setFromCamera(new Vector2(x, 0), camera)
+      raycaster.far = useGame.getState().stats.swordRange
+      hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart)
+      if (hit) break
+    }
+
     if (hit) {
       ;(hit.object.userData.hit as ((damage: number) => void) | undefined)?.(useGame.getState().stats.swordDamage)
       spawnImpact(hit, 'katana')
@@ -529,22 +535,39 @@ export function Combat() {
 
   useEffect(() => {
     const onContext = (e: MouseEvent) => e.preventDefault()
-    const onMouse = (event: MouseEvent) => {
+    const onMouseDown = (event: MouseEvent) => {
       if (useGame.getState().phase !== 'wave' || (document.pointerLockElement == null && !useMobileInput.getState().active)) return
-      if (event.button === 0) shoot()
+      if (event.button === 0) {
+        mouseFireHeld.current = true
+        shoot()
+      }
       if (event.button === 2) slash()
     }
+    const onMouseUp = (event: MouseEvent) => {
+      if (event.button === 0) mouseFireHeld.current = false
+    }
+    const onBlur = () => {
+      mouseFireHeld.current = false
+    }
     window.addEventListener('contextmenu', onContext)
-    window.addEventListener('mousedown', onMouse)
+    window.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mouseup', onMouseUp)
+    window.addEventListener('blur', onBlur)
     return () => {
       window.removeEventListener('contextmenu', onContext)
-      window.removeEventListener('mousedown', onMouse)
+      window.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('blur', onBlur)
     }
   }, [camera, raycaster, scene])
 
   useFrame((_, delta) => {
     const now = performance.now()
     const mobile = useMobileInput.getState()
+    if (useGame.getState().phase === 'wave' && !mobile.active && mouseFireHeld.current && document.pointerLockElement != null) {
+      shoot()
+    }
+
     if (mobile.active && useGame.getState().phase === 'wave') {
       if (mobile.fireHeld) shoot()
       if (mobile.bladePulse !== seenBlade.current) {
