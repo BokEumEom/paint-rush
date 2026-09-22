@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
-import { BufferGeometry, Group, LineBasicMaterial, MathUtils, Mesh, PerspectiveCamera, Quaternion, Raycaster, Vector2, Vector3 } from 'three'
+import { BufferGeometry, Group, LineBasicMaterial, MathUtils, PerspectiveCamera, Quaternion, Raycaster, Vector2, Vector3 } from 'three'
 import { useGame } from './store'
 import { useMobileInput } from './mobileInput'
 
@@ -11,8 +11,7 @@ export function Player() {
   const body = useRef<RapierRigidBody>(null)
   const lineGeometry = useRef<BufferGeometry>(null)
   const hookHead = useRef<Group>(null)
-  const ropeA = useRef<Mesh>(null)
-  const ropeB = useRef<Mesh>(null)
+  const ropePieces = useRef<Group[]>([])
   const { camera, scene } = useThree()
   const perspectiveCamera = camera as PerspectiveCamera
   const keys = useRef(new Set<string>())
@@ -35,21 +34,38 @@ export function Player() {
   const lineMaterial = useMemo(() => new LineBasicMaterial({ color: '#6f4a2b', linewidth: 2 }), [])
   const hookRotation = useMemo(() => new Quaternion(), [])
   const ropeRotation = useMemo(() => new Quaternion(), [])
+  const ropePieceCount = 18
   const phase = useGame((s) => s.phase)
 
-  const updateRopeSegment = (mesh: Mesh | null, start: Vector3, end: Vector3) => {
-    if (!mesh) return
-    const direction = end.clone().sub(start)
-    const length = direction.length()
-    if (length < 0.001) {
-      mesh.visible = false
-      return
+  const quadraticPoint = (start: Vector3, control: Vector3, end: Vector3, t: number) => {
+    const a = start.clone().multiplyScalar((1 - t) * (1 - t))
+    const b = control.clone().multiplyScalar(2 * (1 - t) * t)
+    const c = end.clone().multiplyScalar(t * t)
+    return a.add(b).add(c)
+  }
+
+  const updateRopeVisual = (start: Vector3, control: Vector3, end: Vector3) => {
+    for (let i = 0; i < ropePieceCount; i += 1) {
+      const group = ropePieces.current[i]
+      if (!group) continue
+      const t0 = i / ropePieceCount
+      const t1 = (i + 1) / ropePieceCount
+      const p0 = quadraticPoint(start, control, end, t0)
+      const p1 = quadraticPoint(start, control, end, t1)
+      const direction = p1.clone().sub(p0)
+      const length = direction.length()
+
+      if (length < 0.001) {
+        group.visible = false
+        continue
+      }
+
+      group.visible = true
+      group.position.copy(p0).add(p1).multiplyScalar(0.5)
+      ropeRotation.setFromUnitVectors(UP, direction.clone().normalize())
+      group.quaternion.copy(ropeRotation)
+      group.scale.set(1, length, 1)
     }
-    mesh.visible = true
-    mesh.position.copy(start).add(end).multiplyScalar(0.5)
-    ropeRotation.setFromUnitVectors(UP, direction.clone().normalize())
-    mesh.quaternion.copy(ropeRotation)
-    mesh.scale.set(1, length, 1)
   }
 
   const clearHook = () => {
@@ -57,8 +73,9 @@ export function Player() {
     hookFlying.current = false
     hookAttached.current = false
     if (hookHead.current) hookHead.current.visible = false
-    if (ropeA.current) ropeA.current.visible = false
-    if (ropeB.current) ropeB.current.visible = false
+    ropePieces.current.forEach((piece) => {
+      if (piece) piece.visible = false
+    })
   }
 
   useEffect(() => {
@@ -239,8 +256,9 @@ export function Player() {
     if (!target && lineGeometry.current) {
       lineGeometry.current.setFromPoints([new Vector3(0, -100, 0), new Vector3(0, -100, 0)])
       if (hookHead.current) hookHead.current.visible = false
-      if (ropeA.current) ropeA.current.visible = false
-      if (ropeB.current) ropeB.current.visible = false
+      ropePieces.current.forEach((piece) => {
+        if (piece) piece.visible = false
+      })
     }
 
     if (target && hookFlying.current) {
@@ -259,8 +277,7 @@ export function Player() {
       const mid = ropeOrigin.clone().lerp(hookTip.current, 0.5)
       mid.y -= ropeOrigin.distanceTo(hookTip.current) * 0.03
       lineGeometry.current?.setFromPoints([ropeOrigin, mid, hookTip.current])
-      updateRopeSegment(ropeA.current, ropeOrigin, mid)
-      updateRopeSegment(ropeB.current, mid, hookTip.current)
+      updateRopeVisual(ropeOrigin, mid, hookTip.current)
 
       if (flight >= 1) {
         hookFlying.current = false
@@ -329,8 +346,7 @@ export function Player() {
       const mid = ropeOrigin.clone().lerp(target, 0.5)
       mid.y -= Math.max(0.04, ropeOrigin.distanceTo(target) * 0.012)
       lineGeometry.current?.setFromPoints([ropeOrigin, mid, target])
-      updateRopeSegment(ropeA.current, ropeOrigin, mid)
-      updateRopeSegment(ropeB.current, mid, target)
+      updateRopeVisual(ropeOrigin, mid, target)
       return
     }
 
@@ -377,14 +393,24 @@ export function Player() {
         <primitive object={lineMaterial} attach="material" />
       </line>
 
-      <mesh ref={ropeA} visible={false}>
-        <cylinderGeometry args={[0.026, 0.026, 1, 10]} />
-        <meshBasicMaterial color="#8a5c32" />
-      </mesh>
-      <mesh ref={ropeB} visible={false}>
-        <cylinderGeometry args={[0.026, 0.026, 1, 10]} />
-        <meshBasicMaterial color="#8a5c32" />
-      </mesh>
+      {Array.from({ length: ropePieceCount }, (_, i) => (
+        <group
+          key={i}
+          ref={(node) => {
+            if (node) ropePieces.current[i] = node
+          }}
+          visible={false}
+        >
+          <mesh>
+            <cylinderGeometry args={[0.075, 0.075, 1, 10]} />
+            <meshBasicMaterial color="#2b211d" />
+          </mesh>
+          <mesh scale={[0.76, 1.01, 0.76]}>
+            <cylinderGeometry args={[0.075, 0.075, 1, 10]} />
+            <meshBasicMaterial color={i % 2 === 0 ? '#9a6538' : '#d4a14b'} />
+          </mesh>
+        </group>
+      ))}
 
       <group ref={hookHead} visible={false} scale={1.25}>
         <mesh position={[0, 0, -0.12]}>
