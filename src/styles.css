@@ -38,6 +38,43 @@ button { font: inherit; }
 .crosshair-ref em { top: 2px; left: 12px; background: #fff7ec; }
 .crosshair-ref span { bottom: 2px; left: 12px; background: #fff7ec; }
 
+.ability-row {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.ability {
+  width: 42px;
+  height: 42px;
+  border: 2.5px solid #2b2830;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: 2px 2px 0 rgba(43,40,48,.32);
+  font: 700 8px/1 'Space Mono', monospace;
+}
+.ability b {
+  font-size: 8px;
+  line-height: 1;
+}
+.ability small {
+  position: absolute;
+  top: 45px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font: 700 7px/1 'Permanent Marker', cursive;
+  letter-spacing: .02em;
+}
+.ability.yellow { background: #f4c63b; }
+.ability.cyan { background: #31c6cb; }
+
+
 
 .combat-text { position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%) rotate(-5deg); font: 61px/.9 'Bangers','Permanent Marker',cursive; color: #efbd37; -webkit-text-stroke: 3px #2e2932; text-shadow: 4px 4px 0 #fff4d9; letter-spacing: .03em; }
 .wave-clear { position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%) rotate(-2deg); font: 67px/.88 'Bangers','Permanent Marker',cursive; color: #efbc35; -webkit-text-stroke: 3px #2e2932; text-shadow: 4px 4px 0 #f6eee2; white-space: nowrap; }
@@ -233,6 +270,24 @@ html.touch-game canvas {
   font-size: 15px;
 }
 
+.touch-action.dash {
+  right: max(120px, calc(env(safe-area-inset-right) + 108px));
+  bottom: max(118px, calc(env(safe-area-inset-bottom) + 106px));
+  width: clamp(52px, 8vw, 64px);
+  height: clamp(52px, 8vw, 64px);
+  background: rgba(244, 198, 59, .92);
+  font-size: 12px;
+}
+.touch-action.hook {
+  right: max(54px, calc(env(safe-area-inset-right) + 42px));
+  bottom: max(132px, calc(env(safe-area-inset-bottom) + 120px));
+  width: clamp(56px, 8.5vw, 68px);
+  height: clamp(56px, 8.5vw, 68px);
+  background: rgba(49, 198, 203, .92);
+  font-size: 12px;
+}
+
+
 
 .touch-game .ability-row {
   display: none;
@@ -343,6 +398,15 @@ html.touch-game canvas {
     right: max(105px, calc(env(safe-area-inset-right) + 94px));
   }
 
+  .touch-action.dash {
+    right: max(104px, calc(env(safe-area-inset-right) + 92px));
+    bottom: max(116px, calc(env(safe-area-inset-bottom) + 104px));
+  }
+
+  .touch-action.hook {
+    right: max(38px, calc(env(safe-area-inset-right) + 28px));
+    bottom: max(126px, calc(env(safe-area-inset-bottom) + 114px));
+  }
 
   .perk-grid {
     grid-template-columns: 1fr;
