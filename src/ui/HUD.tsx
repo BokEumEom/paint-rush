@@ -117,7 +117,7 @@ export function HUD() {
             <div className="ability cyan"><b>E</b><small>HOOK</small></div>
           </div>
 
-          {combatText && <div className="combat-text">{combatText}</div>
+          {combatText && <div className="combat-text">{combatText}</div>}
           {alive === 0 && phase === 'wave' && <div className="wave-clear">WAVE CLEARED<small>+100</small></div>}
           {waveIntro && phase === 'wave' && <div className="wave-intro">WAVE {wave}<small>PAINT STOP</small></div>}
         </>
