@@ -19,9 +19,6 @@ export function Player() {
   const dashPulse = useRef(0)
   const yaw = useRef(0)
   const pitch = useRef(0)
-  const seenJump = useRef(0)
-  const seenDash = useRef(0)
-  const seenGrapple = useRef(0)
   const raycaster = useMemo(() => new Raycaster(), [])
   const lineMaterial = useMemo(() => new LineBasicMaterial({ color: '#24212a', linewidth: 2 }), [])
   const phase = useGame((s) => s.phase)
@@ -96,48 +93,6 @@ export function Player() {
     const p = rb.translation()
     const velocity = rb.linvel()
 
-    if (mobile.active && phase === 'wave') {
-      if (mobile.jumpPulse !== seenJump.current) {
-        seenJump.current = mobile.jumpPulse
-        const target = grappleTarget.current
-        if (target) {
-          const dir = new Vector3(target.x - p.x, target.y - p.y, target.z - p.z).normalize()
-          const launch = useGame.getState().stats.grappleForce * 1.18
-          rb.setLinvel({ x: dir.x * launch, y: Math.max(8, dir.y * launch + 5), z: dir.z * launch }, true)
-          grappleTarget.current = null
-        } else if (Math.abs(velocity.y) < 0.28) {
-          rb.setLinvel({ x: velocity.x, y: 7.4, z: velocity.z }, true)
-        }
-      }
-
-      if (mobile.dashPulse !== seenDash.current) {
-        seenDash.current = mobile.dashPulse
-        if (performance.now() - lastDash.current > 520) {
-          lastDash.current = performance.now()
-          dashPulse.current = 1
-          const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-          forward.y = 0
-          if (forward.lengthSq() > 0) forward.normalize()
-          rb.setLinvel({ x: forward.x * 19, y: Math.max(velocity.y, 1), z: forward.z * 19 }, true)
-        }
-      }
-
-      if (mobile.grapplePulse !== seenGrapple.current) {
-        seenGrapple.current = mobile.grapplePulse
-        if (grappleTarget.current) {
-          grappleTarget.current = null
-        } else {
-          const cooldown = useGame.getState().stats.grappleCooldown * 1000
-          if (performance.now() - lastGrapple.current >= cooldown) {
-            lastGrapple.current = performance.now()
-            raycaster.setFromCamera(new Vector2(0, 0), perspectiveCamera)
-            raycaster.far = 25
-            const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.grapple === true)
-            if (hit) grappleTarget.current = hit.point.clone()
-          }
-        }
-      }
-    }
 
     const speed = Math.hypot(velocity.x, velocity.z)
     const inputActive = document.pointerLockElement != null || mobile.active
@@ -156,9 +111,9 @@ export function Player() {
 
     if (performance.now() < useGame.getState().hitStopUntil) {
       rb.setLinvel({
-        x: velocity.x * 0.12,
-        y: velocity.y * 0.12,
-        z: velocity.z * 0.12,
+        x: velocity.x * 0.45,
+        y: velocity.y * 0.45,
+        z: velocity.z * 0.45,
       }, true)
       return
     }
