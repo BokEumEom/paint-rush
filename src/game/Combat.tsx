@@ -249,11 +249,11 @@ function WeaponView() {
 
     if (gun.current) {
       gun.current.position.set(
-        0.49 + shotWave * 0.028,
-        -0.145 - shotWave * 0.012,
-        -0.015 + shotWave * 0.105,
+        0.72 + shotWave * 0.022,
+        -0.18 - shotWave * 0.008,
+        -0.015 + shotWave * 0.095,
       )
-      gun.current.rotation.set(0, 0, -0.235 + shotWave * 0.045)
+      gun.current.rotation.set(0, 0, -0.52 + shotWave * 0.035)
     }
 
     if (muzzleFlash.current) {
@@ -321,7 +321,7 @@ function WeaponView() {
         </mesh>
       </group>
 
-      <group ref={gun} position={[0.49, -0.145, -0.015]} rotation={[0, 0, -0.235]} scale={0.9}>
+      <group ref={gun} position={[0.72, -0.18, -0.015]} rotation={[0, 0, -0.52]} scale={0.82}>
         <FlatPiece geometry={geometry.barrel} color="#f3c63b" position={[0, 0, 0.004]} outline={1.07} />
         <FlatPiece geometry={geometry.muzzle} color="#282333" position={[0, 0, 0.012]} outline={1.04} />
         <FlatPiece geometry={geometry.underBody} color="#31c6cb" position={[0, 0, 0.006]} outline={1.07} />
@@ -341,7 +341,7 @@ function WeaponView() {
           <meshBasicMaterial color="#bff28f" transparent opacity={0.72} depthTest={false} />
         </mesh>
 
-        <group ref={muzzleFlash} position={[-0.84, 0.055, 0.04]} visible={false}>
+        <group ref={muzzleFlash} position={[-0.845, 0.052, 0.04]} visible={false}>
           <mesh scale={1.13} position={[0, 0, -0.006]} renderOrder={29}>
             <shapeGeometry args={[makeBurstShape(2.5)]} />
             <meshBasicMaterial color={INK} depthTest={false} side={DoubleSide} />
@@ -458,7 +458,7 @@ export function Combat() {
   }
 
   const getMuzzlePosition = () =>
-    new Vector3(0.13, -0.17, -0.95).applyQuaternion(camera.quaternion).add(camera.position)
+    new Vector3(0.145, -0.184, -0.572).applyQuaternion(camera.quaternion).add(camera.position)
 
   const spawnImpact = (hit: Intersection<Object3D>, kind: 'gun' | 'katana') => {
     const id = nextId.current++
