@@ -127,15 +127,6 @@ export function MobileControls() {
       <button className="touch-action blade" onPointerDown={(e) => { e.preventDefault(); useMobileInput.getState().blade() }}>
         BLADE
       </button>
-      <button className="touch-action jump" onPointerDown={(e) => { e.preventDefault(); useMobileInput.getState().jump() }}>
-        JUMP
-      </button>
-      <button className="touch-action dash" onPointerDown={(e) => { e.preventDefault(); useMobileInput.getState().dash() }}>
-        DASH
-      </button>
-      <button className="touch-action grapple" onPointerDown={(e) => { e.preventDefault(); useMobileInput.getState().grapple() }}>
-        GRAPPLE
-      </button>
     </div>
   )
 }
