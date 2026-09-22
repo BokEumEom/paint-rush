@@ -19,6 +19,8 @@ export function Player() {
   const dashPulse = useRef(0)
   const yaw = useRef(0)
   const pitch = useRef(0)
+  const seenDash = useRef(0)
+  const seenHook = useRef(0)
   const raycaster = useMemo(() => new Raycaster(), [])
   const lineMaterial = useMemo(() => new LineBasicMaterial({ color: '#24212a', linewidth: 2 }), [])
   const phase = useGame((s) => s.phase)
@@ -43,30 +45,43 @@ export function Player() {
         }
       }
 
-      if ((event.code === 'ShiftLeft' || event.code === 'ShiftRight') && performance.now() - lastDash.current > 520) {
+      if ((event.code === 'ShiftLeft' || event.code === 'ShiftRight') && performance.now() - lastDash.current > 430) {
         lastDash.current = performance.now()
         dashPulse.current = 1
         const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
         forward.y = 0
-        if (forward.lengthSq() > 0) forward.normalize()
+        forward.normalize()
+        const right = new Vector3().crossVectors(forward, UP).normalize()
+        const dashDir = new Vector3()
+        if (keys.current.has('KeyW')) dashDir.add(forward)
+        if (keys.current.has('KeyS')) dashDir.sub(forward)
+        if (keys.current.has('KeyD')) dashDir.add(right)
+        if (keys.current.has('KeyA')) dashDir.sub(right)
+        if (dashDir.lengthSq() === 0) dashDir.copy(forward)
+        dashDir.normalize()
         const v = rb.linvel()
-        rb.setLinvel({ x: forward.x * 19, y: Math.max(v.y, 1), z: forward.z * 19 }, true)
+        rb.setLinvel({ x: dashDir.x * 20.5, y: Math.max(v.y, 0.7), z: dashDir.z * 20.5 }, true)
       }
 
       if (event.code === 'KeyQ' || event.code === 'KeyE') {
+        if (grappleTarget.current) {
+          grappleTarget.current = null
+          return
+        }
         const cooldown = useGame.getState().stats.grappleCooldown * 1000
         if (performance.now() - lastGrapple.current < cooldown) return
         lastGrapple.current = performance.now()
         raycaster.setFromCamera(new Vector2(0, 0), perspectiveCamera)
-        raycaster.far = 25
-        const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.grapple === true)
+        raycaster.far = 30
+        const hit = raycaster.intersectObjects(scene.children, true).find(
+          (i) => !i.object.userData.enemyPart && (i.object.userData.grapple === true || i.object.userData.paintable === true),
+        )
         if (hit) grappleTarget.current = hit.point.clone()
       }
     }
 
     const onUp = (event: KeyboardEvent) => {
       keys.current.delete(event.code)
-      if (event.code === 'KeyQ' || event.code === 'KeyE') grappleTarget.current = null
     }
 
     window.addEventListener('keydown', onDown)
@@ -93,6 +108,47 @@ export function Player() {
     const p = rb.translation()
     const velocity = rb.linvel()
 
+    if (mobile.active && phase === 'wave') {
+      if (mobile.dashPulse !== seenDash.current) {
+        seenDash.current = mobile.dashPulse
+        if (performance.now() - lastDash.current > 430) {
+          lastDash.current = performance.now()
+          dashPulse.current = 1
+          const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+          forward.y = 0
+          forward.normalize()
+          const right = new Vector3().crossVectors(forward, UP).normalize()
+          const dashDir = new Vector3()
+          dashDir.addScaledVector(forward, mobile.moveY)
+          dashDir.addScaledVector(right, mobile.moveX)
+          if (dashDir.lengthSq() < 0.04) dashDir.copy(forward)
+          dashDir.normalize()
+          rb.setLinvel({
+            x: dashDir.x * 20.5,
+            y: Math.max(velocity.y, 0.7),
+            z: dashDir.z * 20.5,
+          }, true)
+        }
+      }
+
+      if (mobile.hookPulse !== seenHook.current) {
+        seenHook.current = mobile.hookPulse
+        if (grappleTarget.current) {
+          grappleTarget.current = null
+        } else {
+          const cooldown = useGame.getState().stats.grappleCooldown * 1000
+          if (performance.now() - lastGrapple.current >= cooldown) {
+            lastGrapple.current = performance.now()
+            raycaster.setFromCamera(new Vector2(0, 0), perspectiveCamera)
+            raycaster.far = 30
+            const hit = raycaster.intersectObjects(scene.children, true).find(
+              (i) => !i.object.userData.enemyPart && (i.object.userData.grapple === true || i.object.userData.paintable === true),
+            )
+            if (hit) grappleTarget.current = hit.point.clone()
+          }
+        }
+      }
+    }
 
     const speed = Math.hypot(velocity.x, velocity.z)
     const inputActive = document.pointerLockElement != null || mobile.active
@@ -132,9 +188,15 @@ export function Player() {
       const dir = target.clone().sub(pos)
       if (dir.length() < 1.25) grappleTarget.current = null
       else {
+        const distance = dir.length()
         dir.normalize()
-        const force = useGame.getState().stats.grappleForce
-        rb.setLinvel({ x: dir.x * force, y: dir.y * force, z: dir.z * force }, true)
+        const maxForce = useGame.getState().stats.grappleForce
+        const pull = Math.min(maxForce, Math.max(13, distance * 1.45))
+        rb.setLinvel({
+          x: dir.x * pull + velocity.x * 0.18,
+          y: dir.y * pull + velocity.y * 0.1,
+          z: dir.z * pull + velocity.z * 0.18,
+        }, true)
       }
       lineGeometry.current?.setFromPoints([camera.position.clone(), target])
       return
