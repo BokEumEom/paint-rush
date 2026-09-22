@@ -111,10 +111,6 @@ export function HUD() {
           <div className="score-ref">{score.toString().padStart(6, '0')}</div>
 
           <div className="crosshair-ref"><i /><b /><em /><span /></div>
-          <div className="ability-row">
-            <div className="ability yellow">↻<small>DASH</small></div>
-            <div className="ability cyan">↗<small>GRAPPLE</small></div>
-          </div>
 
           {combatText && <div className="combat-text">{combatText}</div>}
           {alive === 0 && phase === 'wave' && <div className="wave-clear">WAVE CLEARED<small>+100</small></div>}
