@@ -415,23 +415,36 @@ function PaintProjectile({ shot }: { shot: PaintShot }) {
 
   useFrame(() => {
     if (!group.current) return
-    const age = Math.min(1, (performance.now() - shot.born) / 88)
+    const age = Math.min(1, (performance.now() - shot.born) / 112)
     const eased = 1 - Math.pow(1 - age, 2)
     group.current.position.copy(shot.start).lerp(shot.end, eased)
     group.current.quaternion.copy(orientation)
-    const stretch = 1 + Math.min(distance, 20) * 0.035
-    group.current.scale.set(0.052 * stretch, 0.052, 0.105 + (1 - age) * 0.075)
+    const perspectiveBoost = 1 + Math.min(distance, 20) * 0.008
+    const pulse = 1 + Math.sin(age * Math.PI) * 0.12
+    group.current.scale.setScalar(0.092 * perspectiveBoost * pulse)
   })
 
   return (
     <group ref={group} position={shot.start} renderOrder={25}>
-      <mesh>
-        <sphereGeometry args={[1, 10, 8]} />
+      <mesh scale={1.18} renderOrder={24}>
+        <sphereGeometry args={[1, 14, 10]} />
+        <meshBasicMaterial color={INK} depthTest={false} />
+      </mesh>
+      <mesh renderOrder={25}>
+        <sphereGeometry args={[1, 14, 10]} />
         <meshBasicMaterial color={shot.color} depthTest={false} />
       </mesh>
-      <mesh position={[0, 0, 0.09]} scale={0.42}>
+      <mesh position={[0.22, 0.22, 0.38]} scale={0.24} renderOrder={26}>
         <sphereGeometry args={[1, 8, 6]} />
-        <meshBasicMaterial color="#fff4bf" transparent opacity={0.55} depthTest={false} blending={AdditiveBlending} />
+        <meshBasicMaterial color="#fff8d4" transparent opacity={0.82} depthTest={false} blending={AdditiveBlending} />
+      </mesh>
+      <mesh position={[0, 0, -1.55]} scale={0.48} renderOrder={24}>
+        <sphereGeometry args={[1, 10, 8]} />
+        <meshBasicMaterial color={shot.color} transparent opacity={0.92} depthTest={false} />
+      </mesh>
+      <mesh position={[0.08, -0.05, -2.35]} scale={0.27} renderOrder={24}>
+        <sphereGeometry args={[1, 8, 6]} />
+        <meshBasicMaterial color={shot.color} transparent opacity={0.72} depthTest={false} />
       </mesh>
     </group>
   )
@@ -590,7 +603,7 @@ export function Combat() {
       camera.position.y += Math.cos(now * 0.21) * s * 0.75
     }
 
-    setShots((prev) => (prev.some((shot) => now - shot.born > 105) ? prev.filter((shot) => now - shot.born <= 105) : prev))
+    setShots((prev) => (prev.some((shot) => now - shot.born > 128) ? prev.filter((shot) => now - shot.born <= 128) : prev))
     setImpacts((prev) => (prev.some((impact) => now - impact.born > 140) ? prev.filter((impact) => now - impact.born <= 140) : prev))
   })
 
