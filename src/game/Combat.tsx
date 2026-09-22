@@ -445,6 +445,7 @@ export function Combat() {
   const lastShot = useRef(0)
   const lastSlash = useRef(0)
   const seenBlade = useRef(0)
+  const mouseFireHeld = useRef(false)
   const raycaster = useMemo(() => new Raycaster(), [])
 
   const addSplat = (hit: Intersection<Object3D>) => {
