@@ -35,6 +35,9 @@ type GameState = {
   hitColor: string
   shotPulse: number
   slashPulse: number
+  impactPulse: number
+  impactStrength: number
+  hitStopUntil: number
   stats: PlayerStats
   startGame: () => void
   restart: () => void
@@ -46,6 +49,7 @@ type GameState = {
   refillPaint: (amount?: number) => void
   triggerShot: () => void
   triggerSlash: () => void
+  triggerImpact: (strength: number, hitStopMs?: number) => void
   choosePerk: (perk: PerkId) => void
 }
 
@@ -74,6 +78,9 @@ const initial = {
   hitColor: '#7c3aed',
   shotPulse: 0,
   slashPulse: 0,
+  impactPulse: 0,
+  impactStrength: 0,
+  hitStopUntil: 0,
   stats: { ...baseStats },
 }
 
@@ -107,6 +114,12 @@ export const useGame = create<GameState>((set, get) => ({
     set((s) => ({ paint: Math.min(s.maxPaint, amount == null ? s.maxPaint : s.paint + amount) })),
   triggerShot: () => set((s) => ({ shotPulse: s.shotPulse + 1 })),
   triggerSlash: () => set((s) => ({ slashPulse: s.slashPulse + 1 })),
+  triggerImpact: (impactStrength, hitStopMs = 0) =>
+    set((s) => ({
+      impactPulse: s.impactPulse + 1,
+      impactStrength,
+      hitStopUntil: hitStopMs > 0 ? performance.now() + hitStopMs : s.hitStopUntil,
+    })),
   choosePerk: (perk) => {
     const s = get()
     const stats = { ...s.stats }
