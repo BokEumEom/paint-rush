@@ -29,6 +29,7 @@ export function HUD() {
   const [combatText, setCombatText] = useState('')
   const [showHit, setShowHit] = useState(false)
   const [locked, setLocked] = useState(document.pointerLockElement != null)
+  const [touchMode] = useState(() => window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0)
   const [waveIntro, setWaveIntro] = useState(true)
   const prevScore = useRef(0)
 
@@ -73,7 +74,10 @@ export function HUD() {
     return () => document.removeEventListener('pointerlockchange', sync)
   }, [])
 
-  const requestLock = () => document.querySelector('canvas')?.requestPointerLock()
+  const requestLock = () => {
+    if (touchMode) return
+    document.querySelector('canvas')?.requestPointerLock?.()
+  }
   const start = () => {
     startGame()
     window.setTimeout(requestLock, 40)
@@ -118,7 +122,7 @@ export function HUD() {
         </>
       )}
 
-      {phase === 'wave' && !locked && (
+      {phase === 'wave' && !touchMode && !locked && (
         <div className="pause-overlay">
           <div className="notebook pause-card">
             <div className="pause-accent" />
@@ -141,7 +145,7 @@ export function HUD() {
           <div className="scribble">REFERENCE BUILD // VIDEO MATCH PASS</div>
           <h1>PAINT<br /><em>RUSH</em></h1>
           <p>Fast arena FPS with paint, katana attacks and grapple-launch movement.</p>
-          <button onClick={start}>CLICK TO PLAY</button>
+          <button onClick={start}>{touchMode ? 'TAP TO PLAY' : 'CLICK TO PLAY'}</button>
         </div>
       )}
 
