@@ -15,6 +15,7 @@ import {
   type Object3D,
 } from 'three'
 import { useGame } from './store'
+import { useMobileInput } from './mobileInput'
 
 type Splat = {
   id: number
@@ -278,6 +279,7 @@ export function Combat() {
   const nextId = useRef(1)
   const lastShot = useRef(0)
   const lastSlash = useRef(0)
+  const seenBlade = useRef(0)
   const raycaster = useMemo(() => new Raycaster(), [])
 
   const addSplat = (hit: Intersection<Object3D>) => {
@@ -305,16 +307,19 @@ export function Combat() {
     raycaster.setFromCamera(new Vector2((Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread), camera)
     raycaster.far = 46
     const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart || i.object.userData.paintable)
+    const end = hit
+      ? hit.point
+      : raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(35))
+    spawnShotVisuals(end)
     if (!hit) return
     ;(hit.object.userData.hit as ((damage: number) => void) | undefined)?.(useGame.getState().stats.gunDamage)
-    spawnShotVisuals(hit.point)
     addSplat(hit)
   }
 
   useEffect(() => {
     const onContext = (e: MouseEvent) => e.preventDefault()
     const onMouse = (event: MouseEvent) => {
-      if (useGame.getState().phase !== 'wave' || document.pointerLockElement == null) return
+      if (useGame.getState().phase !== 'wave' || (document.pointerLockElement == null && !useMobileInput.getState().active)) return
       const now = performance.now()
       if (event.button === 0 && now - lastShot.current > 108) {
         lastShot.current = now
@@ -345,6 +350,34 @@ export function Combat() {
 
   useFrame((_, delta) => {
     const now = performance.now()
+    const mobile = useMobileInput.getState()
+
+    if (mobile.active && useGame.getState().phase === 'wave') {
+      if (mobile.fireHeld && now - lastShot.current > 108) {
+        lastShot.current = now
+        if (useGame.getState().consumePaint(2.4)) {
+          useGame.getState().triggerShot()
+          castShot(0.002)
+          if (Math.random() < useGame.getState().stats.doubleTapChance) castShot(0.022)
+        }
+      }
+
+      if (mobile.bladePulse !== seenBlade.current) {
+        seenBlade.current = mobile.bladePulse
+        if (now - lastSlash.current > 320) {
+          lastSlash.current = now
+          useGame.getState().triggerSlash()
+          raycaster.setFromCamera(new Vector2(0, 0), camera)
+          raycaster.far = useGame.getState().stats.swordRange
+          const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart)
+          if (hit) {
+            ;(hit.object.userData.hit as ((damage: number) => void) | undefined)?.(useGame.getState().stats.swordDamage)
+            addSplat(hit)
+          }
+        }
+      }
+    }
+
     if (useGame.getState().phase === 'wave' && useGame.getState().paint < useGame.getState().maxPaint) {
       useGame.getState().refillPaint(delta * 9.2)
     }
