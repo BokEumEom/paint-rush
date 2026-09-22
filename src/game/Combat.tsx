@@ -171,54 +171,54 @@ function WeaponView() {
 
   const geometry = useMemo(() => ({
     blade: polygon([
-      [-0.055, -0.78],
-      [0.065, -0.78],
-      [0.075, 0.62],
-      [0.015, 0.82],
-      [-0.072, 0.76],
+      [-0.052, -0.94],
+      [0.058, -0.94],
+      [0.061, 0.76],
+      [0.018, 0.93],
+      [-0.062, 0.84],
     ]),
     bladeHighlight: polygon([
-      [-0.025, -0.7],
-      [-0.002, -0.7],
-      [0.02, 0.62],
-      [-0.006, 0.69],
-      [-0.025, 0.6],
+      [-0.026, -0.87],
+      [-0.004, -0.87],
+      [0.012, 0.74],
+      [-0.008, 0.81],
+      [-0.029, 0.73],
     ]),
     body: polygon([
-      [-0.24, 0.12],
-      [0.33, 0.1],
-      [0.54, -0.14],
-      [-0.18, -0.17],
+      [-0.23, 0.1],
+      [0.36, 0.1],
+      [0.48, -0.13],
+      [-0.2, -0.15],
     ]),
     underBody: polygon([
-      [-0.18, -0.18],
-      [0.4, -0.17],
-      [0.31, -0.3],
-      [-0.29, -0.27],
+      [-0.18, -0.15],
+      [0.39, -0.14],
+      [0.31, -0.25],
+      [-0.27, -0.25],
     ]),
     barrel: polygon([
-      [-0.68, 0.13],
-      [-0.22, 0.1],
-      [-0.2, -0.02],
-      [-0.68, 0.01],
+      [-0.7, 0.11],
+      [-0.22, 0.09],
+      [-0.2, -0.015],
+      [-0.7, 0.005],
     ]),
     muzzle: polygon([
-      [-0.78, 0.17],
-      [-0.66, 0.15],
-      [-0.66, -0.03],
-      [-0.79, -0.05],
+      [-0.82, 0.155],
+      [-0.69, 0.12],
+      [-0.69, -0.015],
+      [-0.82, -0.055],
     ]),
     connector: polygon([
-      [0.18, 0.13],
-      [0.33, 0.12],
-      [0.35, 0.28],
-      [0.22, 0.28],
+      [0.2, 0.1],
+      [0.34, 0.1],
+      [0.36, 0.23],
+      [0.23, 0.23],
     ]),
     trigger: polygon([
-      [0.12, -0.16],
-      [0.23, -0.16],
-      [0.19, -0.28],
-      [0.08, -0.27],
+      [0.12, -0.13],
+      [0.22, -0.13],
+      [0.19, -0.22],
+      [0.1, -0.22],
     ]),
   }), [])
 
@@ -234,7 +234,7 @@ function WeaponView() {
   useFrame((state) => {
     if (!root.current) return
 
-    const base = new Vector3(0, -0.37, -0.6).applyQuaternion(camera.quaternion)
+    const base = new Vector3(0, -0.385, -0.59).applyQuaternion(camera.quaternion)
     root.current.position.copy(camera.position).add(base)
     root.current.quaternion.copy(camera.quaternion)
 
@@ -249,18 +249,18 @@ function WeaponView() {
 
     if (gun.current) {
       gun.current.position.set(
-        0.47 + shotWave * 0.05,
-        -0.125 - shotWave * 0.025,
-        -0.02 + shotWave * 0.09,
+        0.49 + shotWave * 0.028,
+        -0.145 - shotWave * 0.012,
+        -0.015 + shotWave * 0.105,
       )
-      gun.current.rotation.set(0, 0, -0.21 - shotWave * 0.1)
+      gun.current.rotation.set(0, 0, -0.235 + shotWave * 0.045)
     }
 
     if (muzzleFlash.current) {
       muzzleFlash.current.visible = shotActive && shotAge < 0.52
-      const flashScale = shotActive ? 0.55 + easeOutBack(Math.min(1, shotAge * 2.2)) * 0.7 : 0.1
+      const flashScale = shotActive ? 0.5 + easeOutBack(Math.min(1, shotAge * 2.35)) * 0.58 : 0.1
       muzzleFlash.current.scale.setScalar(flashScale)
-      muzzleFlash.current.rotation.z = -0.12 + shotAge * 0.35
+      muzzleFlash.current.rotation.z = -0.06 + shotAge * 0.24
     }
 
     const slashAge = (now - slashTime.current) / 285
@@ -270,26 +270,26 @@ function WeaponView() {
 
     if (sword.current) {
       let rotationZ = -0.31
-      let x = -0.5
+      let x = -0.515
       let y = -0.02
       let z = -0.035
-      let scale = 1.03
+      let scale = 1.08
 
       if (slashActive) {
         if (stage === 0) {
-          rotationZ += slashWave * 1.0
+          rotationZ += slashWave * 0.88
           x += slashWave * 0.11
           y += slashWave * 0.04
         } else if (stage === 1) {
-          rotationZ -= slashWave * 0.9
+          rotationZ -= slashWave * 0.8
           x += slashWave * 0.08
           y -= slashWave * 0.03
         } else {
           rotationZ += slashWave * 0.2
-          x += slashWave * 0.25
+          x += slashWave * 0.2
           y += slashWave * 0.1
-          z -= slashWave * 0.24
-          scale += slashWave * 0.22
+          z -= slashWave * 0.18
+          scale += slashWave * 0.16
         }
       }
 
@@ -307,7 +307,7 @@ function WeaponView() {
 
   return (
     <group ref={root} renderOrder={20}>
-      <group ref={sword} position={[-0.5, -0.02, -0.035]} rotation={[0.015, 0, -0.31]} scale={1.03}>
+      <group ref={sword} position={[-0.515, -0.025, -0.035]} rotation={[0.015, 0, -0.31]} scale={1.08}>
         <FlatPiece geometry={geometry.blade} color="#fbfbf5" outline={1.075} />
         <mesh geometry={geometry.bladeHighlight} position={[-0.012, 0, 0.012]} renderOrder={23}>
           <meshBasicMaterial color="#d8d5e7" transparent opacity={0.8} depthTest={false} side={DoubleSide} />
@@ -321,35 +321,38 @@ function WeaponView() {
         </mesh>
       </group>
 
-      <group ref={gun} position={[0.47, -0.125, -0.02]} rotation={[0, 0, -0.21]} scale={0.86}>
+      <group ref={gun} position={[0.49, -0.145, -0.015]} rotation={[0, 0, -0.235]} scale={0.9}>
         <FlatPiece geometry={geometry.barrel} color="#f3c63b" position={[0, 0, 0.004]} outline={1.07} />
         <FlatPiece geometry={geometry.muzzle} color="#282333" position={[0, 0, 0.012]} outline={1.04} />
         <FlatPiece geometry={geometry.underBody} color="#31c6cb" position={[0, 0, 0.006]} outline={1.07} />
         <FlatPiece geometry={geometry.body} color="#eb367f" position={[0, 0, 0.014]} outline={1.07} />
-        <FlatPiece geometry={geometry.connector} color="#353043" position={[0, 0, 0.016]} outline={1.06} />
-        <FlatPiece geometry={geometry.trigger} color="#24212b" position={[0, 0, 0.017]} outline={1.02} />
+        <FlatPiece geometry={geometry.connector} color="#353043" position={[0, 0, 0.016]} outline={1.055} />
 
-        <mesh position={[0.36, 0.29, 0.012]} renderOrder={20} scale={1.08}>
+        <mesh position={[0.37, 0.245, 0.012]} renderOrder={20} scale={1.08}>
           <circleGeometry args={[0.145, 24]} />
           <meshBasicMaterial color={INK} depthTest={false} side={DoubleSide} />
         </mesh>
-        <mesh position={[0.36, 0.29, 0.022]} renderOrder={21}>
+        <mesh position={[0.37, 0.245, 0.022]} renderOrder={21}>
           <circleGeometry args={[0.145, 24]} />
           <meshBasicMaterial color="#77d44d" depthTest={false} side={DoubleSide} />
         </mesh>
-        <mesh position={[0.405, 0.335, 0.027]} renderOrder={22}>
+        <mesh position={[0.415, 0.29, 0.027]} renderOrder={22}>
           <circleGeometry args={[0.035, 16]} />
           <meshBasicMaterial color="#bff28f" transparent opacity={0.72} depthTest={false} />
         </mesh>
 
-        <group ref={muzzleFlash} position={[-0.8, 0.06, 0.035]} visible={false}>
+        <group ref={muzzleFlash} position={[-0.84, 0.055, 0.04]} visible={false}>
+          <mesh scale={1.13} position={[0, 0, -0.006]} renderOrder={29}>
+            <shapeGeometry args={[makeBurstShape(2.5)]} />
+            <meshBasicMaterial color={INK} depthTest={false} side={DoubleSide} />
+          </mesh>
           <mesh renderOrder={30}>
             <shapeGeometry args={[makeBurstShape(2.5)]} />
-            <meshBasicMaterial color="#f5d43d" depthTest={false} side={DoubleSide} blending={AdditiveBlending} />
+            <meshBasicMaterial color="#38d4da" depthTest={false} side={DoubleSide} />
           </mesh>
-          <mesh scale={0.48} position={[0, 0, 0.006]} renderOrder={31}>
+          <mesh scale={0.42} position={[0, 0, 0.006]} renderOrder={31}>
             <shapeGeometry args={[makeBurstShape(4.1)]} />
-            <meshBasicMaterial color="#fff7c8" depthTest={false} side={DoubleSide} blending={AdditiveBlending} />
+            <meshBasicMaterial color="#fffdf2" depthTest={false} side={DoubleSide} blending={AdditiveBlending} />
           </mesh>
         </group>
       </group>
@@ -417,7 +420,7 @@ function PaintProjectile({ shot }: { shot: PaintShot }) {
     group.current.position.copy(shot.start).lerp(shot.end, eased)
     group.current.quaternion.copy(orientation)
     const stretch = 1 + Math.min(distance, 20) * 0.035
-    group.current.scale.set(0.075 * stretch, 0.075, 0.15 + (1 - age) * 0.12)
+    group.current.scale.set(0.052 * stretch, 0.052, 0.105 + (1 - age) * 0.075)
   })
 
   return (
@@ -426,7 +429,7 @@ function PaintProjectile({ shot }: { shot: PaintShot }) {
         <sphereGeometry args={[1, 10, 8]} />
         <meshBasicMaterial color={shot.color} depthTest={false} />
       </mesh>
-      <mesh position={[0, 0, 0.12]} scale={0.5}>
+      <mesh position={[0, 0, 0.09]} scale={0.42}>
         <sphereGeometry args={[1, 8, 6]} />
         <meshBasicMaterial color="#fff4bf" transparent opacity={0.55} depthTest={false} blending={AdditiveBlending} />
       </mesh>
@@ -526,7 +529,7 @@ export function Combat() {
 
   const shoot = () => {
     const now = performance.now()
-    if (now - lastShot.current <= 108) return
+    if (now - lastShot.current <= 118) return
     lastShot.current = now
     if (!useGame.getState().consumePaint(2.4)) return
     useGame.getState().triggerShot()
