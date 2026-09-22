@@ -35,6 +35,15 @@ type PaintShot = {
   born: number
 }
 
+type ImpactFx = {
+  id: number
+  position: Vector3
+  quaternion: Quaternion
+  color: string
+  born: number
+  strength: number
+}
+
 const COLORS = ['#793fe5', '#ef7a32', '#22bfc4', '#ea3f99', '#84d447', '#16131e']
 const GUN_COLORS = ['#22bfc4', '#ea3f99', '#ef7a32', '#84d447']
 const INK = '#25212b'
@@ -225,7 +234,7 @@ function WeaponView() {
   useFrame((state) => {
     if (!root.current) return
 
-    const base = new Vector3(0, -0.39, -0.63).applyQuaternion(camera.quaternion)
+    const base = new Vector3(0, -0.37, -0.6).applyQuaternion(camera.quaternion)
     root.current.position.copy(camera.position).add(base)
     root.current.quaternion.copy(camera.quaternion)
 
@@ -240,8 +249,8 @@ function WeaponView() {
 
     if (gun.current) {
       gun.current.position.set(
-        0.43 + shotWave * 0.045,
-        -0.11 - shotWave * 0.025,
+        0.47 + shotWave * 0.05,
+        -0.125 - shotWave * 0.025,
         -0.02 + shotWave * 0.09,
       )
       gun.current.rotation.set(0, 0, -0.21 - shotWave * 0.1)
@@ -261,10 +270,10 @@ function WeaponView() {
 
     if (sword.current) {
       let rotationZ = -0.31
-      let x = -0.46
+      let x = -0.5
       let y = -0.02
       let z = -0.035
-      let scale = 0.94
+      let scale = 1.03
 
       if (slashActive) {
         if (stage === 0) {
@@ -298,7 +307,7 @@ function WeaponView() {
 
   return (
     <group ref={root} renderOrder={20}>
-      <group ref={sword} position={[-0.46, -0.02, -0.035]} rotation={[0.015, 0, -0.31]} scale={0.94}>
+      <group ref={sword} position={[-0.5, -0.02, -0.035]} rotation={[0.015, 0, -0.31]} scale={1.03}>
         <FlatPiece geometry={geometry.blade} color="#fbfbf5" outline={1.075} />
         <mesh geometry={geometry.bladeHighlight} position={[-0.012, 0, 0.012]} renderOrder={23}>
           <meshBasicMaterial color="#d8d5e7" transparent opacity={0.8} depthTest={false} side={DoubleSide} />
@@ -312,7 +321,7 @@ function WeaponView() {
         </mesh>
       </group>
 
-      <group ref={gun} position={[0.43, -0.11, -0.02]} rotation={[0, 0, -0.21]} scale={0.78}>
+      <group ref={gun} position={[0.47, -0.125, -0.02]} rotation={[0, 0, -0.21]} scale={0.86}>
         <FlatPiece geometry={geometry.barrel} color="#f3c63b" position={[0, 0, 0.004]} outline={1.07} />
         <FlatPiece geometry={geometry.muzzle} color="#282333" position={[0, 0, 0.012]} outline={1.04} />
         <FlatPiece geometry={geometry.underBody} color="#31c6cb" position={[0, 0, 0.006]} outline={1.07} />
@@ -344,6 +353,50 @@ function WeaponView() {
           </mesh>
         </group>
       </group>
+    </group>
+  )
+}
+
+function ImpactBurst({ impact }: { impact: ImpactFx }) {
+  const group = useRef<Group>(null)
+
+  useFrame(() => {
+    if (!group.current) return
+    const age = Math.min(1, (performance.now() - impact.born) / 130)
+    const scale = 0.2 + easeOutBack(age) * impact.strength
+    group.current.scale.setScalar(scale)
+    group.current.rotation.z = age * 0.35
+  })
+
+  return (
+    <group
+      ref={group}
+      position={impact.position}
+      quaternion={impact.quaternion}
+      renderOrder={35}
+    >
+      <mesh>
+        <shapeGeometry args={[makeBurstShape(impact.id * 0.77)]} />
+        <meshBasicMaterial
+          color={impact.color}
+          transparent
+          opacity={0.95}
+          depthTest={false}
+          side={DoubleSide}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+      <mesh scale={0.48} position={[0, 0, 0.004]}>
+        <shapeGeometry args={[makeBurstShape(impact.id * 1.31)]} />
+        <meshBasicMaterial
+          color="#fff8cf"
+          transparent
+          opacity={0.92}
+          depthTest={false}
+          side={DoubleSide}
+          blending={AdditiveBlending}
+        />
+      </mesh>
     </group>
   )
 }
@@ -385,7 +438,10 @@ export function Combat() {
   const { camera, scene } = useThree()
   const [splats, setSplats] = useState<Splat[]>([])
   const [shots, setShots] = useState<PaintShot[]>([])
+  const [impacts, setImpacts] = useState<ImpactFx[]>([])
   const nextId = useRef(1)
+  const shakeUntil = useRef(0)
+  const shakeStrength = useRef(0)
   const lastShot = useRef(0)
   const lastSlash = useRef(0)
   const seenBlade = useRef(0)
@@ -398,7 +454,29 @@ export function Combat() {
   }
 
   const getMuzzlePosition = () =>
-    new Vector3(0.17, -0.18, -0.92).applyQuaternion(camera.quaternion).add(camera.position)
+    new Vector3(0.13, -0.17, -0.95).applyQuaternion(camera.quaternion).add(camera.position)
+
+  const spawnImpact = (hit: Intersection<Object3D>, kind: 'gun' | 'katana') => {
+    const id = nextId.current++
+    const normal = worldNormal(hit)
+    const quaternion = new Quaternion().setFromUnitVectors(new Vector3(0, 0, 1), normal)
+    const strength = kind === 'katana' ? 0.48 : 0.3
+    const color = kind === 'katana' ? '#fff0a8' : COLORS[id % COLORS.length]
+    setImpacts((prev) => [
+      ...prev.slice(-11),
+      {
+        id,
+        position: hit.point.clone().addScaledVector(normal, 0.025),
+        quaternion,
+        color,
+        born: performance.now(),
+        strength,
+      },
+    ])
+    shakeStrength.current = kind === 'katana' ? 0.045 : 0.016
+    shakeUntil.current = performance.now() + (kind === 'katana' ? 95 : 55)
+    useGame.getState().triggerImpact(kind === 'katana' ? 1 : 0.35, kind === 'katana' ? 45 : 0)
+  }
 
   const spawnShotVisual = (end: Vector3) => {
     const id = nextId.current++
@@ -420,6 +498,7 @@ export function Combat() {
     spawnShotVisual(end)
     if (!hit) return
     ;(hit.object.userData.hit as ((damage: number) => void) | undefined)?.(useGame.getState().stats.gunDamage)
+    spawnImpact(hit, 'gun')
     addSplat(hit)
   }
 
@@ -433,6 +512,7 @@ export function Combat() {
     const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart)
     if (hit) {
       ;(hit.object.userData.hit as ((damage: number) => void) | undefined)?.(useGame.getState().stats.swordDamage)
+      spawnImpact(hit, 'katana')
       addSplat(hit)
     }
   }
@@ -476,13 +556,22 @@ export function Combat() {
     if (useGame.getState().phase === 'wave' && useGame.getState().paint < useGame.getState().maxPaint) {
       useGame.getState().refillPaint(delta * 9.2)
     }
+    if (now < shakeUntil.current) {
+      const remain = Math.max(0, (shakeUntil.current - now) / 95)
+      const s = shakeStrength.current * remain
+      camera.position.x += Math.sin(now * 0.18) * s
+      camera.position.y += Math.cos(now * 0.21) * s * 0.75
+    }
+
     setShots((prev) => (prev.some((shot) => now - shot.born > 105) ? prev.filter((shot) => now - shot.born <= 105) : prev))
+    setImpacts((prev) => (prev.some((impact) => now - impact.born > 140) ? prev.filter((impact) => now - impact.born <= 140) : prev))
   })
 
   return (
     <>
       <WeaponView />
       {shots.map((shot) => <PaintProjectile key={shot.id} shot={shot} />)}
+      {impacts.map((impact) => <ImpactBurst key={impact.id} impact={impact} />)}
       {splats.map((splat) => <BlobSplat key={splat.id} splat={splat} />)}
     </>
   )
