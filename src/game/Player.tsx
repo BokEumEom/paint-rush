@@ -154,6 +154,15 @@ export function Player() {
     perspectiveCamera.updateProjectionMatrix()
     dashPulse.current = Math.max(0, dashPulse.current - delta * 4.8)
 
+    if (performance.now() < useGame.getState().hitStopUntil) {
+      rb.setLinvel({
+        x: velocity.x * 0.12,
+        y: velocity.y * 0.12,
+        z: velocity.z * 0.12,
+      }, true)
+      return
+    }
+
     if (phase !== 'wave' || (!mobile.active && document.pointerLockElement == null)) {
       rb.setLinvel({ x: velocity.x * 0.86, y: velocity.y, z: velocity.z * 0.86 }, true)
       return
