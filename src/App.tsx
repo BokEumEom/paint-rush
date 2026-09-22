@@ -7,6 +7,7 @@ import { Player } from './game/Player'
 import { Combat } from './game/Combat'
 import { WaveDirector } from './game/Enemies'
 import { HUD } from './ui/HUD'
+import { MobileControls } from './ui/MobileControls'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <PointerLockControls pointerSpeed={0.85} />
       </Canvas>
       <HUD />
+      <MobileControls />
     </main>
   )
 }
