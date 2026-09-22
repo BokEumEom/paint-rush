@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Edges } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Group, Matrix3, Quaternion, Raycaster, Shape, ShapeGeometry, Vector3, type Intersection, type Object3D } from 'three'
+import { Group, Matrix3, Quaternion, Raycaster, Shape, ShapeGeometry, Vector2, Vector3, type Intersection, type Object3D } from 'three'
 import { useGame } from './store'
 
 type Splat = {
@@ -145,7 +145,7 @@ export function Combat() {
   }
 
   const castShot = (spread = 0) => {
-    raycaster.setFromCamera({ x: (Math.random() - 0.5) * spread, y: (Math.random() - 0.5) * spread }, camera)
+    raycaster.setFromCamera(new Vector2((Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread), camera)
     raycaster.far = 46
     const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart || i.object.userData.paintable)
     if (!hit) return
@@ -168,7 +168,7 @@ export function Combat() {
       if (event.button === 2 && now - lastSlash.current > 320) {
         lastSlash.current = now
         useGame.getState().triggerSlash()
-        raycaster.setFromCamera({ x: 0, y: 0 }, camera)
+        raycaster.setFromCamera(new Vector2(0, 0), camera)
         raycaster.far = useGame.getState().stats.swordRange
         const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.enemyPart)
         if (hit) {

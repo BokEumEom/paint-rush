@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
-import { BufferGeometry, LineBasicMaterial, MathUtils, Raycaster, Vector3 } from 'three'
+import { BufferGeometry, LineBasicMaterial, MathUtils, PerspectiveCamera, Raycaster, Vector2, Vector3 } from 'three'
 import { useGame } from './store'
 
 const UP = new Vector3(0, 1, 0)
@@ -10,6 +10,7 @@ export function Player() {
   const body = useRef<RapierRigidBody>(null)
   const lineGeometry = useRef<BufferGeometry>(null)
   const { camera, scene } = useThree()
+  const perspectiveCamera = camera as PerspectiveCamera
   const keys = useRef(new Set<string>())
   const grappleTarget = useRef<Vector3 | null>(null)
   const lastDash = useRef(0)
@@ -53,7 +54,7 @@ export function Player() {
         const cooldown = useGame.getState().stats.grappleCooldown * 1000
         if (performance.now() - lastGrapple.current < cooldown) return
         lastGrapple.current = performance.now()
-        raycaster.setFromCamera({ x: 0, y: 0 }, camera)
+        raycaster.setFromCamera(new Vector2(0, 0), perspectiveCamera)
         raycaster.far = 25
         const hit = raycaster.intersectObjects(scene.children, true).find((i) => i.object.userData.grapple === true)
         if (hit) grappleTarget.current = hit.point.clone()
@@ -89,8 +90,8 @@ export function Player() {
     }
 
     const targetFov = grappleTarget.current ? 104 : dashPulse.current > 0.01 ? 101 : 88
-    camera.fov = MathUtils.lerp(camera.fov, targetFov, 1 - Math.exp(-10 * delta))
-    camera.updateProjectionMatrix()
+    perspectiveCamera.fov = MathUtils.lerp(perspectiveCamera.fov, targetFov, 1 - Math.exp(-10 * delta))
+    perspectiveCamera.updateProjectionMatrix()
     dashPulse.current = Math.max(0, dashPulse.current - delta * 4.8)
 
     if (phase !== 'wave' || document.pointerLockElement == null) {
