@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
-import { BufferGeometry, Group, LineBasicMaterial, MathUtils, PerspectiveCamera, Quaternion, Raycaster, Vector2, Vector3 } from 'three'
+import { BufferGeometry, Group, LineBasicMaterial, MathUtils, Mesh, PerspectiveCamera, Quaternion, Raycaster, Vector2, Vector3 } from 'three'
 import { useGame } from './store'
 import { useMobileInput } from './mobileInput'
 
@@ -11,6 +11,8 @@ export function Player() {
   const body = useRef<RapierRigidBody>(null)
   const lineGeometry = useRef<BufferGeometry>(null)
   const hookHead = useRef<Group>(null)
+  const ropeA = useRef<Mesh>(null)
+  const ropeB = useRef<Mesh>(null)
   const { camera, scene } = useThree()
   const perspectiveCamera = camera as PerspectiveCamera
   const keys = useRef(new Set<string>())
@@ -30,9 +32,34 @@ export function Player() {
   const seenDash = useRef(0)
   const seenHook = useRef(0)
   const raycaster = useMemo(() => new Raycaster(), [])
-  const lineMaterial = useMemo(() => new LineBasicMaterial({ color: '#24212a', linewidth: 3 }), [])
+  const lineMaterial = useMemo(() => new LineBasicMaterial({ color: '#6f4a2b', linewidth: 2 }), [])
   const hookRotation = useMemo(() => new Quaternion(), [])
+  const ropeRotation = useMemo(() => new Quaternion(), [])
   const phase = useGame((s) => s.phase)
+
+  const updateRopeSegment = (mesh: Mesh | null, start: Vector3, end: Vector3) => {
+    if (!mesh) return
+    const direction = end.clone().sub(start)
+    const length = direction.length()
+    if (length < 0.001) {
+      mesh.visible = false
+      return
+    }
+    mesh.visible = true
+    mesh.position.copy(start).add(end).multiplyScalar(0.5)
+    ropeRotation.setFromUnitVectors(UP, direction.clone().normalize())
+    mesh.quaternion.copy(ropeRotation)
+    mesh.scale.set(1, length, 1)
+  }
+
+  const clearHook = () => {
+    grappleTarget.current = null
+    hookFlying.current = false
+    hookAttached.current = false
+    if (hookHead.current) hookHead.current.visible = false
+    if (ropeA.current) ropeA.current.visible = false
+    if (ropeB.current) ropeB.current.visible = false
+  }
 
   useEffect(() => {
     const onDown = (event: KeyboardEvent) => {
@@ -74,9 +101,7 @@ export function Player() {
 
       if (event.code === 'KeyQ' || event.code === 'KeyE') {
         if (hookFlying.current || hookAttached.current) {
-          grappleTarget.current = null
-          hookFlying.current = false
-          hookAttached.current = false
+          clearHook()
           return
         }
         const cooldown = useGame.getState().stats.grappleCooldown * 1000
@@ -88,7 +113,7 @@ export function Player() {
           (i) => !i.object.userData.enemyPart && (i.object.userData.grapple === true || i.object.userData.paintable === true),
         )
         if (hit) {
-          const start = camera.position.clone().add(new Vector3(0.18, -0.15, -0.42).applyQuaternion(camera.quaternion))
+          const start = camera.position.clone().add(new Vector3(0.4, -0.34, -0.52).applyQuaternion(camera.quaternion))
           grappleTarget.current = hit.point.clone()
           hookStart.current.copy(start)
           hookTip.current.copy(start)
@@ -154,9 +179,7 @@ export function Player() {
       if (mobile.hookPulse !== seenHook.current) {
         seenHook.current = mobile.hookPulse
         if (hookFlying.current || hookAttached.current) {
-          grappleTarget.current = null
-          hookFlying.current = false
-          hookAttached.current = false
+          clearHook()
         } else {
           const cooldown = useGame.getState().stats.grappleCooldown * 1000
           if (performance.now() - lastGrapple.current >= cooldown) {
@@ -167,7 +190,7 @@ export function Player() {
               (i) => !i.object.userData.enemyPart && (i.object.userData.grapple === true || i.object.userData.paintable === true),
             )
             if (hit) {
-              const start = camera.position.clone().add(new Vector3(0.18, -0.15, -0.42).applyQuaternion(camera.quaternion))
+              const start = camera.position.clone().add(new Vector3(0.4, -0.34, -0.52).applyQuaternion(camera.quaternion))
               grappleTarget.current = hit.point.clone()
               hookStart.current.copy(start)
               hookTip.current.copy(start)
@@ -211,11 +234,13 @@ export function Player() {
     }
 
     const target = grappleTarget.current
-    const ropeOrigin = camera.position.clone().add(new Vector3(0.18, -0.16, -0.38).applyQuaternion(camera.quaternion))
+    const ropeOrigin = camera.position.clone().add(new Vector3(0.4, -0.34, -0.52).applyQuaternion(camera.quaternion))
 
     if (!target && lineGeometry.current) {
       lineGeometry.current.setFromPoints([new Vector3(0, -100, 0), new Vector3(0, -100, 0)])
       if (hookHead.current) hookHead.current.visible = false
+      if (ropeA.current) ropeA.current.visible = false
+      if (ropeB.current) ropeB.current.visible = false
     }
 
     if (target && hookFlying.current) {
@@ -232,14 +257,16 @@ export function Player() {
       }
 
       const mid = ropeOrigin.clone().lerp(hookTip.current, 0.5)
-      mid.y -= ropeOrigin.distanceTo(hookTip.current) * 0.025
+      mid.y -= ropeOrigin.distanceTo(hookTip.current) * 0.03
       lineGeometry.current?.setFromPoints([ropeOrigin, mid, hookTip.current])
+      updateRopeSegment(ropeA.current, ropeOrigin, mid)
+      updateRopeSegment(ropeB.current, mid, hookTip.current)
 
       if (flight >= 1) {
         hookFlying.current = false
         hookAttached.current = true
         const playerPos = new Vector3(p.x, p.y + 0.48, p.z)
-        ropeLength.current = Math.max(2.8, playerPos.distanceTo(target) * 0.72)
+        ropeLength.current = Math.max(3.4, playerPos.distanceTo(target) * 0.9)
       }
     }
 
@@ -253,18 +280,21 @@ export function Player() {
       const toAnchor = target.clone().sub(pos)
       const distance = toAnchor.length()
 
-      if (distance < 1.35) {
-        grappleTarget.current = null
-        hookAttached.current = false
+      if (distance < 1.5) {
+        clearHook()
       } else {
         const dir = toAnchor.normalize()
         const currentVelocity = new Vector3(velocity.x, velocity.y, velocity.z)
+
+        ropeLength.current = Math.max(3.2, ropeLength.current - delta * 5.8)
+
         const radialSpeed = currentVelocity.dot(dir)
         const stretch = Math.max(0, distance - ropeLength.current)
-        const desiredRadial = Math.min(18.5, 6 + stretch * 4.8)
+        const reelPull = 4.2 + Math.max(0, ropeLength.current - 3.2) * 0.22
+        const desiredRadial = Math.min(20.5, reelPull + stretch * 6.2)
 
         if (radialSpeed < desiredRadial) {
-          currentVelocity.addScaledVector(dir, (desiredRadial - radialSpeed) * 0.72)
+          currentVelocity.addScaledVector(dir, (desiredRadial - radialSpeed) * Math.min(1, delta * 10.5))
         }
 
         const forwardAir = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
@@ -286,7 +316,7 @@ export function Player() {
           steer.normalize()
           const radialComponent = dir.clone().multiplyScalar(steer.dot(dir))
           steer.sub(radialComponent).normalize()
-          currentVelocity.addScaledVector(steer, 1.8)
+          currentVelocity.addScaledVector(steer, 2.6)
         }
 
         rb.setLinvel({
@@ -297,8 +327,10 @@ export function Player() {
       }
 
       const mid = ropeOrigin.clone().lerp(target, 0.5)
-      mid.y -= Math.max(0.06, ropeOrigin.distanceTo(target) * 0.018)
+      mid.y -= Math.max(0.04, ropeOrigin.distanceTo(target) * 0.012)
       lineGeometry.current?.setFromPoints([ropeOrigin, mid, target])
+      updateRopeSegment(ropeA.current, ropeOrigin, mid)
+      updateRopeSegment(ropeB.current, mid, target)
       return
     }
 
@@ -340,25 +372,39 @@ export function Player() {
       >
         <CapsuleCollider args={[0.62, 0.38]} />
       </RigidBody>
-      <line>
+      <line visible={false}>
         <bufferGeometry ref={lineGeometry} />
         <primitive object={lineMaterial} attach="material" />
       </line>
-      <group ref={hookHead} visible={false}>
-        <mesh rotation={[0, 0, Math.PI / 4]}>
-          <boxGeometry args={[0.12, 0.035, 0.22]} />
+
+      <mesh ref={ropeA} visible={false}>
+        <cylinderGeometry args={[0.026, 0.026, 1, 10]} />
+        <meshBasicMaterial color="#8a5c32" />
+      </mesh>
+      <mesh ref={ropeB} visible={false}>
+        <cylinderGeometry args={[0.026, 0.026, 1, 10]} />
+        <meshBasicMaterial color="#8a5c32" />
+      </mesh>
+
+      <group ref={hookHead} visible={false} scale={1.25}>
+        <mesh position={[0, 0, -0.12]}>
+          <cylinderGeometry args={[0.035, 0.045, 0.28, 8]} />
           <meshBasicMaterial color="#24212a" />
         </mesh>
-        <mesh position={[-0.08, 0.02, 0.09]} rotation={[0, 0, -0.65]}>
-          <boxGeometry args={[0.1, 0.03, 0.13]} />
+        <mesh position={[0, 0, 0.035]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.105, 0.026, 7, 18, Math.PI * 1.25]} />
           <meshBasicMaterial color="#24212a" />
         </mesh>
-        <mesh position={[0.08, 0.02, 0.09]} rotation={[0, 0, 0.65]}>
-          <boxGeometry args={[0.1, 0.03, 0.13]} />
+        <mesh position={[-0.102, 0, 0.075]} rotation={[0, 0.35, -0.78]}>
+          <coneGeometry args={[0.04, 0.18, 6]} />
           <meshBasicMaterial color="#24212a" />
         </mesh>
-        <mesh position={[0, 0, -0.13]}>
-          <cylinderGeometry args={[0.035, 0.05, 0.12, 8]} />
+        <mesh position={[0.102, 0, 0.075]} rotation={[0, -0.35, 0.78]}>
+          <coneGeometry args={[0.04, 0.18, 6]} />
+          <meshBasicMaterial color="#24212a" />
+        </mesh>
+        <mesh position={[0, 0, -0.29]}>
+          <cylinderGeometry args={[0.045, 0.058, 0.14, 8]} />
           <meshBasicMaterial color="#f1c63c" />
         </mesh>
       </group>
